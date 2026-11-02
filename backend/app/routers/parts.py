@@ -1,6 +1,6 @@
 """Original parts catalog (EPC) of the user's car, by VIN, from 17VIN: categories -> diagram + OE numbers."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from ..db import get_db
@@ -11,6 +11,8 @@ from ..services import vin17
 from .vehicles import get_owned_vehicle
 
 router = APIRouter(prefix="/api/vehicles/{vehicle_id}/parts", tags=["parts"])
+# No auth: <img> tags cannot send the token. Only 17VIN diagram names are accepted (vin17.SAFE_IMG).
+image_router = APIRouter(prefix="/api/parts-img", tags=["parts"])
 
 
 async def _epc(vehicle: Vehicle, db: Session) -> str:
@@ -68,3 +70,13 @@ async def part_list(
         return await vin17.parts(epc, vehicle.vin, code, level)
     except vin17.Vin17Error:
         raise HTTPException(status_code=503, detail="Parts catalog unavailable, please try again later")
+
+
+@image_router.get("/{epc}/{name}")
+async def diagram(epc: str, name: str):
+    """17VIN diagram served over our own HTTPS (their image host is HTTP only)."""
+    image = await vin17.fetch_image(epc, name)
+    if image is None:
+        raise HTTPException(status_code=404, detail="Image not found")
+    content, media_type = image
+    return Response(content, media_type=media_type, headers={"Cache-Control": "public, max-age=604800"})

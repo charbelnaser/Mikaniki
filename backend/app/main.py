@@ -35,6 +35,7 @@ app.include_router(chat.router)
 app.include_router(obd.router)
 app.include_router(media.router)
 app.include_router(parts.router)
+app.include_router(parts.image_router)
 
 # Uploaded photos use random UUID names. For production, move them to S3/R2 with signed URLs.
 Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)

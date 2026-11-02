@@ -82,10 +82,18 @@ def test_vin17_fallback(monkeypatch):
 
     async def fake_call(path, params):
         signed.append(f"{path}?vin={params['vin']}")
+        # Shape of a real 3001 answer: Chinese fields + *_en twins, and the exact factory entry
         return {"model_year_from_vin": "2017", "epc": "peugeot", "epc_id": "42", "matching_mode": "exact_match",
-                "model_list": [{"Brand": "Peugeot", "Model": "3008", "Model_year": "2017", "Cc": "1.6",
-                                "Air_intake": "Turbo", "Engine_no": "EP6FDT", "Fuel_type": "汽油",
-                                "Gear_num": "6", "Transmission_detail": "AT", "Img_adress": "a.jpg,b.jpg"}]}
+                "brand": "标致", "made_in_en": "France",
+                "model_list": [{"Brand": "标致", "Brand_en": "Peugeot", "Model": "3008", "Model_en": "3008",
+                                "Model_year": "2017", "Cc": "1.6L", "Cc_en": "1.6L", "Air_intake_en": "Turbo",
+                                "Engine_no_en": "EP6FDT", "Fuel_type": "汽油", "Fuel_type_en": "gas",
+                                "Gear_num_en": "6", "Transmission_detail_en": "automatic(AT)",
+                                "Body_type_en": "SUV", "Img_adress": "a.jpg,b.jpg"}] * 2,
+                "model_original_epc_list": [{"CarAttributes": [
+                    {"Language": "zh", "Col_name": "级别", "Col_value": "高级"},
+                    {"Language": "en", "Col_name": "Grade", "Col_value": "Allure"},
+                    {"Language": "en", "Col_name": "ATM/MTM", "Col_value": "ATM"}]}]}
 
     monkeypatch.setattr(catalog, "_decode_vpic", vpic_partial)
     monkeypatch.setattr(vin17, "enabled", lambda: True)
@@ -94,7 +102,8 @@ def test_vin17_fallback(monkeypatch):
 
     r = asyncio.run(catalog.decode_vin("vf3mcbhzhhs123456"))
     assert (r.make, r.model, r.year) == ("Peugeot", "3008", 2017)
-    assert r.engine == "1.6L Turbo (EP6FDT)" and r.transmission == "6 AT" and r.fuel_type is None
+    assert r.engine == "1.6L Turbo (EP6FDT)" and r.transmission == "automatic" and r.fuel_type == "gasoline"
+    assert (r.trim, r.body_class, r.plant_country, r.warnings) == ("Allure", "SUV", "France", [])
     assert r.raw["epc"] == "peugeot" and r.raw["source"] == "17vin" and len(r.raw["images"]) == 2
     assert signed == ["/?vin=VF3MCBHZHHS123456"]
 
@@ -364,7 +373,7 @@ def test_parts_catalog(client, auth, monkeypatch):
         if path == "/":
             return {"epc": "toyota", "epc_id": "7"}
         if params["action"] == "cata1":
-            return {"catalist": [{"cata_level": 1, "is_last": 0, "cata_code": "09", "name_en": "Tools",
+            return {"catalist": [{"cata_level": 1, "is_last": 0, "cata_code": "09", "name_en": "1 Tools",
                                   "name_zh": "工具", "illustration_img_address": "", "Is_fit_for_this_vin": 1}]}
         if params["action"] == "cata2":
             assert params["cata1_code"] == "09"
@@ -373,9 +382,15 @@ def test_parts_catalog(client, auth, monkeypatch):
                                   "is_fit_for_this_vin": 0}]}
         assert params == {"action": "part", "vin": "JTDBR32E720123456",
                           "last_cata_code": "0901_090562C-0001", "last_cata_code_level": "2"}
-        return {"partlist": [{"callout": "09114", "partnumber_original": "091140G010", "partnumber": "091140G010",
-                              "name_en": "Jack handle extension", "qty": "01", "is_fit_for_this_vin": 1,
-                              "illustration_img_address": "090562C.png"}]}
+        return {"imgaddress": "090562C.png",
+                "partlist": [{"callout": "09114", "partnumber_original": "09114-0G010", "partnumber": "091140G010",
+                              "name_en": "EXTENSION, JACK HANDLE", "qty": "01", "is_fit_for_this_vin": 1,
+                              "illustration_img_address": "090562C.png"},
+                             {"partnumber": "9155180625", "name_zh": "标准件"}],
+                "all_img_hotspots": [{"img_hotspots": {"img_name": "090562C.png", "img_width": 200, "img_height": 400,
+                                                       "hotspots": [{"callout": "09114", "topleft_x": 50, "topleft_y": 100},
+                                                                    {"callout": "09114", "topleft_x": 50, "topleft_y": 100},
+                                                                    {"callout": "", "topleft_x": 1, "topleft_y": 1}]}}]}
 
     monkeypatch.setattr(vin17, "enabled", lambda: True)
     monkeypatch.setattr(vin17, "call", fake_call)
@@ -392,11 +407,22 @@ def test_parts_catalog(client, auth, monkeypatch):
                     "is_last": False, "fits": True, "image": None}]
     sub = client.get(f"{base}/categories", headers=auth, params={"parent": "09", "parent_level": 1}).json()
     assert sub[0]["is_last"] and not sub[0]["fits"]
-    assert sub[0]["image"] == "http://resource.17vin.com/img/toyota/090562C.png"
+    assert sub[0]["image"] == "/api/parts-img/toyota/090562C.png"
     parts = client.get(base, headers=auth, params={"code": "0901_090562C-0001", "level": 2}).json()
-    assert parts["image"] == "http://resource.17vin.com/img/toyota/090562C.png"
+    assert parts["image"] == "/api/parts-img/toyota/090562C.png"
     p = parts["parts"][0]
-    assert (p["number"], p["callout"], p["qty"], p["fits"]) == ("091140G010", "09114", "1", True)
+    assert (p["number"], p["name"], p["callout"], p["qty"], p["fits"]) == (
+        "091140G010", "Extension, Jack Handle", "09114", "1", True)
+    assert parts["parts"][1]["name"] == "Standard hardware (bolt, nut, clip)"
+    assert parts["hotspots"] == [{"callout": "09114", "x": 25.0, "y": 25.0}]
+
+    async def fake_image(epc, name):
+        return (PNG, "image/png") if (epc, name) == ("toyota", "090562C.png") else None
+
+    monkeypatch.setattr(vin17, "fetch_image", fake_image)
+    img = client.get("/api/parts-img/toyota/090562C.png")
+    assert img.status_code == 200 and img.headers["content-type"] == "image/png"
+    assert client.get("/api/parts-img/toyota/other.png").status_code == 404
 
     from app.db import SessionLocal
     from app.models import Vehicle

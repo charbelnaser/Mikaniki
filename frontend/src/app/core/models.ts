@@ -177,7 +177,15 @@ export interface PartItem {
   fits: boolean;
 }
 
+/** Callout label position on the diagram, in % of its size. */
+export interface Hotspot {
+  callout: string;
+  x: number;
+  y: number;
+}
+
 export interface PartList {
   image: string | null;
+  hotspots: Hotspot[];
   parts: PartItem[];
 }

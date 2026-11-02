@@ -181,8 +181,15 @@ class PartOut(BaseModel):
     fits: bool
 
 
+class HotspotOut(BaseModel):
+    callout: str
+    x: float  # % of the diagram width, top-left of the callout label
+    y: float  # % of the diagram height
+
+
 class PartListOut(BaseModel):
     image: str | None = None
+    hotspots: list[HotspotOut] = []
     parts: list[PartOut]
 
 

@@ -54,9 +54,17 @@ import { TranslatePipe } from '../../shared/translate.pipe';
         </div>
         <div class="parts-layout">
           @if (l.image) {
-            <a class="diagram card" [href]="l.image" target="_blank" rel="noopener">
-              <img [src]="l.image" [alt]="trail().at(-1)?.name ?? ''" referrerpolicy="no-referrer" />
-            </a>
+            <div class="diagram card">
+              <div class="canvas">
+                <img [src]="l.image" [alt]="trail().at(-1)?.name ?? ''" />
+                @for (h of l.hotspots; track $index) {
+                  <button type="button" class="spot" [class.on]="h.callout === selected()"
+                          [style.left.%]="h.x" [style.top.%]="h.y" [title]="h.callout"
+                          [attr.aria-label]="h.callout" (click)="select(h.callout, true)"></button>
+                }
+              </div>
+              <a class="small muted zoom" [href]="l.image" target="_blank" rel="noopener">🔍 {{ 'parts.zoom' | t }}</a>
+            </div>
           }
           <div class="card table-wrap">
             <table>
@@ -70,11 +78,12 @@ import { TranslatePipe } from '../../shared/translate.pipe';
               </thead>
               <tbody>
                 @for (p of visibleParts(); track $index) {
-                  <tr [class.dim]="!p.fits">
+                  <tr [class.dim]="!p.fits" [class.on]="!!p.callout && p.callout === selected()"
+                      [attr.data-callout]="p.callout" (click)="select(p.callout)">
                     <td class="callout" dir="ltr">{{ p.callout }}</td>
                     <td class="number" dir="ltr">
                       <code>{{ p.number }}</code>
-                      <button type="button" class="copy" (click)="copy(p.number)">
+                      <button type="button" class="copy" (click)="copy(p.number); $event.stopPropagation()">
                         {{ (copied() === p.number ? 'parts.copied' : 'parts.copy') | t }}
                       </button>
                     </td>
@@ -134,8 +143,20 @@ import { TranslatePipe } from '../../shared/translate.pipe';
     .parts-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 16px;
       align-items: start; margin-bottom: 12px; }
     @media (max-width: 800px) { .parts-layout { grid-template-columns: 1fr; } }
-    .diagram { padding: 8px; background: #fff; position: sticky; top: 12px; }
-    .diagram img { width: 100%; display: block; }
+    .diagram { padding: 8px; background: #fff; position: sticky; top: 72px; }
+    .canvas { position: relative; }
+    .canvas img { width: 100%; display: block; }
+    /* Hotspot = top-left corner of the callout label on the drawing */
+    .spot { position: absolute; width: 7.5%; min-width: 26px; aspect-ratio: 2.6 / 1; padding: 0; cursor: pointer;
+      border: 2px solid transparent; border-radius: 4px; background: rgba(242, 163, 58, .18);
+      transition: background .15s ease, border-color .15s ease; }
+    .spot:hover { background: rgba(242, 163, 58, .4); }
+    .spot.on { background: rgba(242, 163, 58, .55); border-color: var(--accent-ink); }
+    .zoom { display: inline-block; margin-top: 6px; }
+    tbody tr { cursor: pointer; }
+    tbody tr:hover { background: #faf8f4; }
+    tbody tr.on { background: #fff4e5; }
+    tbody tr.on .callout { color: var(--accent-ink); font-weight: 700; }
     .table-wrap { padding: 0; overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: .9rem; }
     th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: start; vertical-align: top; }
@@ -167,6 +188,8 @@ export class PartsPage implements OnInit {
   protected showAll = signal(false);
   protected filter = signal('');
   protected copied = signal<string | null>(null);
+  /** Callout highlighted on the diagram and in the table. */
+  protected selected = signal<string | null>(null);
 
   protected visibleCategories = computed(() =>
     this.showAll() ? this.categories() : this.categories().filter(c => c.fits));
@@ -199,6 +222,15 @@ export class PartsPage implements OnInit {
     this.load();
   }
 
+  /** Link the diagram and the table; from the diagram, scroll the part's row into view. */
+  protected select(callout: string | null, scroll = false) {
+    if (!callout) return;
+    this.selected.set(this.selected() === callout && !scroll ? null : callout);
+    if (scroll) {
+      document.querySelector(`tr[data-callout="${CSS.escape(callout)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
   protected copy(number: string) {
     navigator.clipboard?.writeText(number).then(() => this.copied.set(number), () => {});
   }
@@ -208,6 +240,7 @@ export class PartsPage implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     this.filter.set('');
+    this.selected.set(null);
     this.list.set(null);
     const done = { error: (e: HttpErrorResponse) => this.fail(e) };
     if (last?.is_last) {

@@ -141,6 +141,7 @@ const en: Dict = {
   'parts.noVin': 'Add the VIN of this car to open its parts catalog.',
   'parts.notFound': 'No parts catalog was found for this VIN.',
   'parts.unavailable': 'The parts catalog is unavailable right now, please try again later.',
+  'parts.zoom': 'Open the full-size diagram',
   'parts.back': 'Back to chat',
 };
 
@@ -283,6 +284,7 @@ const ar: Dict = {
   'parts.noVin': 'زيد رقم الشاصي (VIN) لهالسيارة لتفتح كتالوج القطع.',
   'parts.notFound': 'ما لقينا كتالوج قطع لهالـ VIN.',
   'parts.unavailable': 'كتالوج القطع مش متوفر هلق، جرّب بعدين.',
+  'parts.zoom': 'افتح الرسمة بالحجم الكامل',
   'parts.back': 'رجوع عالمحادثة',
 };
 
@@ -425,6 +427,7 @@ const fr: Dict = {
   'parts.noVin': 'Ajoutez le VIN de cette voiture pour ouvrir son catalogue de pièces.',
   'parts.notFound': 'Aucun catalogue de pièces trouvé pour ce VIN.',
   'parts.unavailable': 'Le catalogue de pièces est indisponible, réessayez plus tard.',
+  'parts.zoom': 'Ouvrir le schéma en grand',
   'parts.back': 'Retour au chat',
 };
 
