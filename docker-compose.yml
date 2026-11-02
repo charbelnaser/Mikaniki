@@ -8,13 +8,14 @@ services:
       CORS_ORIGINS: http://localhost:8080
     volumes:
       - mikaniki-data:/data
-    ports:
-      - "8000:8000"
+    restart: unless-stopped
+    # No published port: only the frontend's nginx reaches it (/api and /uploads are proxied)
 
   frontend:
     build: ./frontend
     depends_on:
       - backend
+    restart: unless-stopped
     ports:
       - "8080:80"
 
