@@ -66,6 +66,11 @@ input.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter
   transition: transform .05s ease, background .15s ease;
 }
 .btn:active { transform: translateY(1px); }
+.btn-primary:hover:not(:disabled), .btn-accent:hover:not(:disabled) { box-shadow: 0 4px 12px rgba(15, 27, 45, .15); }
+.btn-accent:hover:not(:disabled) { filter: brightness(.97); }
+a:focus-visible, button:focus-visible, .btn:focus-visible, .chip:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 .btn-primary { background: var(--ink); color: var(--paper); }
 .btn-primary:hover:not(:disabled) { background: var(--ink-2); }
@@ -90,6 +95,8 @@ input.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter
 .md ol, .md ul { margin: 4px 0 10px; padding-inline-start: 22px; }
 .md li { margin: 2px 0; }
 .md strong { color: var(--ink); }
+.md .md-h { padding-top: 8px; border-top: 1px solid #f0ece4; }
+.md .md-h:first-child { padding-top: 0; border-top: 0; }
 .md code { background: #f3efe7; padding: 1px 5px; border-radius: 4px; font-size: .9em; }
 
 .alert { padding: 10px 14px; border-radius: 10px; font-size: .92rem; margin-bottom: 14px; }

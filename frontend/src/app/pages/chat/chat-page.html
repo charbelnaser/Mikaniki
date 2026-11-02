@@ -3,8 +3,13 @@
   <aside class="sidebar" [class.open]="showHistory()">
     @if (vehicle(); as v) {
       <div class="car-card">
-        <span class="badge">{{ v.make }}</span>
-        <strong>{{ v.year }} {{ v.model }}</strong>
+        <div class="car-head">
+          <span class="avatar" aria-hidden="true">{{ v.make.charAt(0) }}</span>
+          <div>
+            <span class="make">{{ v.make }}</span>
+            <strong>{{ v.year }} {{ v.model }}</strong>
+          </div>
+        </div>
         @if (v.engine) { <span class="muted small">{{ v.engine }}</span> }
         @if (v.mileage_km != null) { <span class="muted small" dir="ltr">{{ v.mileage_km }} km</span> }
         @if (v.vin) {
@@ -52,6 +57,7 @@
       } @else {
         @for (m of messages(); track m.id) {
           <div class="msg" [class.user]="m.role === 'user'" [class.assistant]="m.role === 'assistant'">
+            @if (m.role === 'assistant') { <span class="bot" aria-hidden="true">🔧</span> }
             @if (m.pending) {
               <div class="bubble thinking"><span class="dots"><i></i><i></i><i></i></span> {{ 'chat.thinking' | t }}</div>
             } @else {

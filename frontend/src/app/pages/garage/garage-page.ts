@@ -13,7 +13,10 @@ import { TranslatePipe } from '../../shared/translate.pipe';
   template: `
     <section class="page">
       <div class="row head">
-        <h1>{{ 'garage.title' | t }}</h1>
+        <div>
+          <h1>{{ 'garage.title' | t }}</h1>
+          @if (vehicles().length) { <p class="muted subtitle">{{ 'garage.subtitle' | t }}</p> }
+        </div>
         <span class="spacer"></span>
         @if (vehicles().length) {
           <a class="btn btn-primary" routerLink="/cars/new">+ {{ 'garage.addCar' | t }}</a>
@@ -34,16 +37,21 @@ import { TranslatePipe } from '../../shared/translate.pipe';
           @for (v of vehicles(); track v.id) {
             <article class="card car">
               <div class="car-top">
-                <span class="badge">{{ v.make }}</span>
-                @if (v.nickname) { <span class="muted nick">{{ v.nickname }}</span> }
+                <span class="avatar" aria-hidden="true">{{ v.make.charAt(0) }}</span>
+                <div class="car-title">
+                  <span class="make">{{ v.make }}@if (v.nickname) { <span class="muted nick"> · {{ v.nickname }}</span> }</span>
+                  <h2>{{ v.year }} {{ v.model }}</h2>
+                </div>
+                <button class="icon-remove" type="button" (click)="remove(v)"
+                        [title]="'garage.delete' | t" [attr.aria-label]="'garage.delete' | t">✕</button>
               </div>
-              <h2>{{ v.year }} {{ v.model }}</h2>
               <ul class="specs muted">
                 @if (v.trim) { <li>{{ v.trim }}</li> }
                 @if (v.engine) { <li>{{ v.engine }}</li> }
                 @if (v.fuel_type) { <li>{{ v.fuel_type }}</li> }
                 @if (v.mileage_km != null) { <li dir="ltr">{{ v.mileage_km | number }} km</li> }
               </ul>
+              @if (v.vin) { <p class="vin"><span dir="ltr">VIN {{ v.vin }}</span></p> }
               @if (reports()[v.id]; as r) {
                 @if (r.available) {
                   <button class="safety" type="button" [title]="'garage.details' | t" (click)="openDetails(v)">
@@ -62,13 +70,11 @@ import { TranslatePipe } from '../../shared/translate.pipe';
                   </button>
                 }
               }
-              <div class="row actions">
-                <a class="btn btn-primary" [routerLink]="['/cars', v.id, 'chat']">{{ 'garage.diagnose' | t }}</a>
+              <div class="actions">
+                <a class="btn btn-primary" [routerLink]="['/cars', v.id, 'chat']">🔧 {{ 'garage.diagnose' | t }}</a>
                 @if (v.vin) {
                   <a class="btn btn-ghost" [routerLink]="['/cars', v.id, 'parts']">🔩 {{ 'parts.short' | t }}</a>
                 }
-                <span class="spacer"></span>
-                <button class="btn btn-danger" type="button" (click)="remove(v)">{{ 'garage.delete' | t }}</button>
               </div>
             </article>
           }
@@ -135,13 +141,26 @@ import { TranslatePipe } from '../../shared/translate.pipe';
   styles: `
     .head { margin-bottom: 16px; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
-    .car h2 { font-size: 1.25rem; margin: 8px 0 6px; }
-    .car-top { display: flex; align-items: center; gap: 8px; }
+    .subtitle { margin: 0; }
+    .car h2 { font-size: 1.2rem; margin: 0; }
+    .car { transition: transform .15s ease, box-shadow .15s ease; }
+    .car:hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(15, 27, 45, .06), 0 12px 28px rgba(15, 27, 45, .1); }
+    .car-top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .avatar { flex: none; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
+      background: var(--ink); color: var(--accent); font-weight: 700; font-size: 1.3rem; }
+    .car-title { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+    .make { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--accent-ink); }
+    .make .nick { text-transform: none; letter-spacing: 0; font-weight: 500; }
+    .icon-remove { flex: none; align-self: flex-start; width: 30px; height: 30px; border-radius: 50%; border: 0;
+      background: none; color: var(--muted); cursor: pointer; font-size: .9rem; }
+    .icon-remove:hover { background: #fff1ec; color: var(--danger); }
+    .vin { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .78rem; letter-spacing: .04em;
+      color: var(--muted); margin: -6px 0 12px; }
     .badge { background: var(--accent); color: var(--ink); font-weight: 700; font-size: .8rem;
       padding: 2px 10px; border-radius: 999px; }
     .nick { font-size: .85rem; }
     .specs { list-style: none; padding: 0; margin: 0 0 14px; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .9rem; }
-    .actions { margin-top: auto; }
+    .actions { margin-top: auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
     .car { display: flex; flex-direction: column; }
     .empty { text-align: center; padding: 40px 24px; }
     .empty-icon { font-size: 2.5rem; }
