@@ -441,3 +441,33 @@ def test_mock_opens_parts_catalog(client, auth):
     conv = client.post(f"/api/vehicles/{car['id']}/conversations", headers=auth).json()
     r = client.post(f"/api/conversations/{conv['id']}/messages", headers=auth, data={"text": "show me the parts"})
     assert '"catalog": true' in r.json()["assistant_message"]["content"]
+
+
+def test_find_part_diagram(monkeypatch):
+    """Part name -> best catalog section: the part itself beats accessories and look-alikes."""
+    import asyncio
+
+    from app.services import vin17
+
+    async def fake_categories(epc, vin, parent=None, parent_level=0):
+        if parent is None:
+            return [{"code": "4", "name": "Chassis", "level": 1, "is_last": False, "fits": True}]
+        return [{"code": "pedal", "name": "Brake Pedal & Bracket", "level": 2, "is_last": True, "fits": True},
+                {"code": "front", "name": "Front Disc Brake Caliper", "level": 2, "is_last": True, "fits": True},
+                {"code": "chain", "name": "Timing Gear Cover", "level": 2, "is_last": True, "fits": True}]
+
+    async def fake_parts(epc, vin, code, level):
+        names = {"pedal": [("47121", "Pad, Brake Pedal")],
+                 "front": [("04465", "Pad Kit, Disc Brake, Front"), ("47750", "Caliper Assy, Front")],
+                 "chain": [("11310", "Cover Sub-Assy, Timing Chain")]}[code]
+        return {"image": f"/api/parts-img/toyota/{code}.png",
+                "hotspots": [{"callout": n, "x": 10, "y": 20} for n, _ in names],
+                "parts": [{"callout": n, "number": n + "000", "name": name, "fits": True} for n, name in names]}
+
+    monkeypatch.setattr(vin17, "categories", fake_categories)
+    monkeypatch.setattr(vin17, "parts", fake_parts)
+    r = asyncio.run(vin17.find_part("toyota", "VIN", "brake pads"))
+    assert r["section"]["code"] == "front" and [p["number"] for p in r["parts"]] == ["04465000"]
+    assert r["hotspots"] == [{"callout": "04465", "x": 10, "y": 20}]
+    assert asyncio.run(vin17.find_part("toyota", "VIN", "timing chain")) is None  # only its cover
+    assert asyncio.run(vin17.find_part("toyota", "VIN", "wheel bearing")) is None

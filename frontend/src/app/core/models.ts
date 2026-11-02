@@ -184,6 +184,15 @@ export interface Hotspot {
   y: number;
 }
 
+/** Factory diagram of the catalog section matching a part named in a chat answer. */
+export interface PartFind {
+  section: { code: string; name: string; level: number };
+  image: string | null;
+  /** only the matched parts' callouts */
+  hotspots: Hotspot[];
+  parts: PartItem[];
+}
+
 export interface PartList {
   image: string | null;
   hotspots: Hotspot[];

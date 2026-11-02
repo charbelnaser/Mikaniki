@@ -67,7 +67,7 @@
                   @let answer = answers().get(m.id);
                   <div class="md" dir="auto" [innerHTML]="answer?.html ?? ''"></div>
                   @if (answer?.media; as media) {
-                    <app-answer-media [media]="media" [vehicle]="vehicle()" />
+                    @if (vehicle(); as v) { <app-answer-media [media]="media" [vehicle]="v" /> }
                   }
                 } @else if (m.content) {
                   <p class="plain" dir="auto">{{ m.content }}</p>

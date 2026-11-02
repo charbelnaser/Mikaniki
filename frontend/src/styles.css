@@ -100,6 +100,8 @@ a:focus-visible, button:focus-visible, .btn:focus-visible, .chip:focus-visible {
 .md .md-h { padding-top: 8px; border-top: 1px solid #f0ece4; }
 .md .md-h:first-child { padding-top: 0; border-top: 0; }
 .md code { background: #f3efe7; padding: 1px 5px; border-radius: 4px; font-size: .9em; }
+.md pre { background: #f3efe7; padding: 10px 12px; border-radius: 8px; overflow-x: auto; margin: 4px 0 10px;
+  font-size: .85em; line-height: 1.4; direction: ltr; text-align: left; }
 
 .alert { padding: 10px 14px; border-radius: 10px; font-size: .92rem; margin-bottom: 14px; }
 .alert-error { background: #fff1ec; color: var(--danger); border: 1px solid #fed7c7; }

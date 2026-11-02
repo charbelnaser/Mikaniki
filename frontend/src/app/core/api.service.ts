@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import {
-  CarModel, ChatReply, Conversation, ConversationDetail, EpaVersion, Lang, Make, PartCategory, PartList, PartPhoto, RepairVideo,
+  CarModel, ChatReply, Conversation, ConversationDetail, EpaVersion, Lang, Make, PartCategory, PartFind, PartList, PartPhoto, RepairVideo,
   User, Vehicle, VehicleInput, VehicleReports, VinDecode,
 } from './models';
 
@@ -77,6 +77,10 @@ export class ApiService {
   partCategories(vehicleId: number, parent?: PartCategory) {
     const params = parent ? new HttpParams().set('parent', parent.code).set('parent_level', parent.level) : undefined;
     return this.http.get<PartCategory[]>(`/api/vehicles/${vehicleId}/parts/categories`, { params });
+  }
+  /** Diagram + OE numbers for a generic part name on this car (null when unknown). */
+  findPart(vehicleId: number, part: string) {
+    return this.http.get<PartFind | null>(`/api/vehicles/${vehicleId}/parts/find`, { params: new HttpParams().set('q', part) });
   }
   partList(vehicleId: number, category: PartCategory) {
     const params = new HttpParams().set('code', category.code).set('level', category.level);

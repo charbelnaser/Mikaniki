@@ -193,6 +193,20 @@ class PartListOut(BaseModel):
     parts: list[PartOut]
 
 
+class PartSectionOut(BaseModel):
+    code: str
+    name: str
+    level: int
+
+
+class PartFindOut(BaseModel):
+    """Factory diagram of the catalog section matching a part name, under a chat answer."""
+    section: PartSectionOut
+    image: str | None = None
+    hotspots: list[HotspotOut] = []  # only the matched parts' callouts
+    parts: list[PartOut]
+
+
 # ---------- Media ----------
 class PartPhotoOut(BaseModel):
     """Wikimedia Commons photo. `author` and `license` must be shown next to it."""

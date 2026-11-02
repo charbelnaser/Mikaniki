@@ -46,8 +46,23 @@ export function renderMarkdown(src: string): string {
     list = null;
   };
 
+  let code: string[] | null = null;  // inside a ``` block (e.g. a small text sketch of the engine bay)
   for (const raw of src.split('\n')) {
     const line = raw.trimEnd();
+    if (/^\s*```/.test(line)) {
+      if (code) {
+        out.push(`<pre>${escape(code.join('\n'))}</pre>`);
+        code = null;
+      } else {
+        closeList();
+        code = [];
+      }
+      continue;
+    }
+    if (code) {
+      code.push(raw);
+      continue;
+    }
     const ol = line.match(/^\s*\d+[.)]\s+(.*)$/);
     const ul = line.match(/^\s*[-*•]\s+(.*)$/);
     const h = line.match(/^#{1,4}\s+(.*)$/);
@@ -71,5 +86,6 @@ export function renderMarkdown(src: string): string {
     }
   }
   closeList();
+  if (code) out.push(`<pre>${escape(code.join('\n'))}</pre>`);  // unclosed block
   return out.join('');
 }

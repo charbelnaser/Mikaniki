@@ -176,6 +176,10 @@ export class PartsPage implements OnInit {
 
   /** Route param (withComponentInputBinding). */
   vehicleId = input.required<string>();
+  /** Optional query params (links under chat answers): open this last-level section directly. */
+  section = input<string>();
+  level = input<string>();
+  name = input<string>();
 
   protected vehicle = signal<Vehicle | null>(null);
   /** Sections opened so far; the last one is shown. */
@@ -207,6 +211,11 @@ export class PartsPage implements OnInit {
 
   ngOnInit() {
     this.api.vehicle(this.id).subscribe({ next: v => this.vehicle.set(v), error: () => {} });
+    const code = this.section();
+    if (code && Number(this.level())) {
+      this.trail.set([{ code, name: this.name() || code, level: Number(this.level()), is_last: true, fits: true,
+                        name_zh: null, remark: null, image: null }]);
+    }
     this.load();
   }
 

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..deps import get_current_user
 from ..models import User, Vehicle
-from ..schemas import PartCategoryOut, PartListOut
+from ..schemas import PartCategoryOut, PartFindOut, PartListOut
 from ..services import vin17
 from .vehicles import get_owned_vehicle
 
@@ -53,6 +53,27 @@ async def categories(
         return await vin17.categories(epc, vehicle.vin, parent, parent_level)
     except vin17.Vin17Error:
         raise HTTPException(status_code=503, detail="Parts catalog unavailable, please try again later")
+
+
+@router.get("/find", response_model=PartFindOut | None)
+async def find_part(
+    vehicle_id: int,
+    q: str = Query(min_length=2, max_length=80),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Diagram + OE numbers for a generic part name ("ignition coil") on this car, or null.
+    Never an error for a missing VIN / catalog: the chat then falls back to a generic photo."""
+    vehicle = get_owned_vehicle(vehicle_id, user, db)
+    try:
+        epc = await _epc(vehicle, db)
+        return await vin17.find_part(epc, vehicle.vin, q)
+    except HTTPException as e:
+        if e.status_code == 404 and e.detail == "Vehicle not found":
+            raise
+        return None
+    except vin17.Vin17Error:
+        return None
 
 
 @router.get("", response_model=PartListOut)

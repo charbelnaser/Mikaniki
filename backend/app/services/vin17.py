@@ -14,6 +14,7 @@ HTTPS, so diagrams are served to the browser through our own /api/parts-img (rou
 Catalog browsing is not billed; only the VIN decode is (about 0.15 CNY).
 """
 
+import asyncio
 import hashlib
 import logging
 import re
@@ -296,4 +297,72 @@ async def parts(epc: str, vin: str, cata_code: str, level: int) -> dict:
             "end_date": row.get("end_date") or None,
             "fits": _fits(row),
         } for row in rows if row.get("partnumber_original") or row.get("partnumber")],
+    }
+
+
+# ---------------------------------------------------------------- part name -> catalog section
+_WORD = re.compile(r"[a-z]+")
+
+
+def _words(text: str) -> set[str]:
+    """Lower-case words, plural 's' dropped: 'Ignition coils' -> {'ignition', 'coil'}."""
+    return {w[:-1] if w.endswith("s") and len(w) > 3 else w for w in _WORD.findall(text.lower()) if len(w) > 2}
+
+
+def _score(name: str, words: set[str]) -> int:
+    return len(words & _words(name))
+
+
+# Words that turn a part into something else: "Pad, Brake Pedal" is not a brake pad, "Bolt(For Alternator)"
+# is not the alternator. A part name with one of these (absent from the query) ranks below exact parts.
+_CONTEXT = {"pedal", "bracket", "bolt", "nut", "clip", "gasket", "cover", "union", "washer", "seal", "hose",
+            "clamp", "carrier", "label", "plate", "pin", "screw", "stud", "grommet", "cushion", "insulator"}
+
+
+def _part_score(name: str, words: set[str]) -> tuple[int, int]:
+    """(query words matched, 1 if the name is the thing itself rather than an accessory of it)."""
+    own = _words(name)
+    accessory = "(for" in name.lower() or bool((own & _CONTEXT) - words)
+    return len(words & own), 0 if accessory else 1
+
+
+async def find_part(epc: str, vin: str, query: str) -> dict | None:
+    """Catalog section + diagram that best match a generic English part name ("ignition coil").
+
+    Walks the category tree (free calls, cached): every top category, then only the sub-categories whose
+    name shares a word with the query; scores the last-level sections by name, then confirms the best
+    few with their part lists. Returns None when nothing matches. Raises Vin17Error.
+    """
+    words = _words(query)
+    if not words:
+        return None
+    sections: list[dict] = []
+    frontier = await categories(epc, vin)
+    while frontier:
+        sections += [c for c in frontier if c["is_last"] and c["fits"]]
+        deeper = [c for c in frontier if not c["is_last"] and c["level"] < 3 and (c["level"] == 1 or _score(c["name"], words))]
+        lists = await asyncio.gather(*(categories(epc, vin, c["code"], c["level"]) for c in deeper))
+        frontier = [c for sub in lists for c in sub]
+    candidates = sorted((c for c in sections if _score(c["name"], words)), key=lambda c: -_score(c["name"], words))[:10]
+    if not candidates:
+        return None
+
+    best = None
+    for section, plist in zip(candidates, await asyncio.gather(*(parts(epc, vin, c["code"], c["level"]) for c in candidates))):
+        matched = [p for p in plist["parts"] if p["fits"] and _score(p["name"], words)]
+        top = max((_part_score(p["name"], words) for p in matched), default=(0, 0))
+        score = (*top, _score(section["name"], words))
+        if best is None or score > best[0]:
+            best = (score, section, plist, [p for p in matched if _part_score(p["name"], words) == top])
+    (part_words, itself, section_words), section, plist, matched = best
+    if part_words < len(words) and section_words < len(words):
+        return None  # e.g. "wheel bearing" only matching "Wheel, Disc": better no diagram than a wrong one
+    if part_words and not itself:
+        return None  # only accessories of it ("Cover, Timing Chain" for "timing chain")
+    callouts = {p["callout"] for p in matched if p["callout"]}
+    return {
+        "section": {"code": section["code"], "name": section["name"], "level": section["level"]},
+        "image": plist["image"],
+        "hotspots": [h for h in plist["hotspots"] if h["callout"] in callouts],
+        "parts": matched[:3],
     }
