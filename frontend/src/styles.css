@@ -1,0 +1,97 @@
+/* ---------- Design tokens ---------- */
+:root {
+  --ink: #0f1b2d;          /* deep navy */
+  --ink-2: #26364d;
+  --paper: #f5f2ec;        /* warm off-white */
+  --card: #ffffff;
+  --line: #e2ddd3;
+  --muted: #6b7280;
+  --accent: #f2a33a;       /* amber, like a dashboard warning light */
+  --accent-ink: #7a4a07;
+  --danger: #c2410c;
+  --ok: #15803d;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgba(15, 27, 45, .06), 0 6px 20px rgba(15, 27, 45, .06);
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  font-family: 'IBM Plex Sans Arabic', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 { line-height: 1.25; margin: 0 0 .4em; }
+h1 { font-size: clamp(1.5rem, 3vw, 2rem); }
+
+a { color: var(--ink); }
+
+/* ---------- Layout ---------- */
+.page { width: 100%; max-width: 980px; margin: 0 auto; padding: 28px 20px 48px; }
+.page-narrow { max-width: 560px; }
+.muted { color: var(--muted); }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.spacer { flex: 1; }
+
+.card {
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 20px;
+}
+
+/* ---------- Forms ---------- */
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.field label { font-size: .9rem; font-weight: 600; }
+.field small { color: var(--muted); font-size: .8rem; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+@media (max-width: 560px) { .grid-2 { grid-template-columns: 1fr; } }
+
+input, select, textarea {
+  font: inherit; color: var(--ink); background: #fff;
+  border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; width: 100%;
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+input.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; text-transform: uppercase; }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font: inherit; font-weight: 600; border-radius: 999px; padding: 10px 20px;
+  border: 1px solid transparent; cursor: pointer; text-decoration: none; white-space: nowrap;
+  transition: transform .05s ease, background .15s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-primary { background: var(--ink); color: var(--paper); }
+.btn-primary:hover:not(:disabled) { background: var(--ink-2); }
+.btn-accent { background: var(--accent); color: var(--ink); }
+.btn-ghost { background: transparent; border-color: var(--line); color: var(--ink); }
+.btn-ghost:hover:not(:disabled) { background: #fff; }
+.btn-danger { background: transparent; color: var(--danger); border-color: transparent; padding-inline: 10px; }
+.btn-block { width: 100%; }
+
+.chip {
+  display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px;
+  border: 1px solid var(--line); background: #fff; font: inherit; font-size: .9rem; cursor: pointer; color: var(--ink);
+}
+.chip.active, .chip:hover { border-color: var(--ink); }
+.chip.active { background: var(--ink); color: var(--paper); }
+
+/* ---------- AI replies (rendered via innerHTML, so styled globally) ---------- */
+.md > :first-child { margin-top: 0; }
+.md > :last-child { margin-bottom: 0; }
+.md p { margin: 0 0 8px; }
+.md .md-h { font-weight: 700; margin-top: 10px; }
+.md ol, .md ul { margin: 4px 0 10px; padding-inline-start: 22px; }
+.md li { margin: 2px 0; }
+.md strong { color: var(--ink); }
+.md code { background: #f3efe7; padding: 1px 5px; border-radius: 4px; font-size: .9em; }
+
+.alert { padding: 10px 14px; border-radius: 10px; font-size: .92rem; margin-bottom: 14px; }
+.alert-error { background: #fff1ec; color: var(--danger); border: 1px solid #fed7c7; }
+.alert-ok { background: #effaf2; color: var(--ok); border: 1px solid #c8ecd3; }

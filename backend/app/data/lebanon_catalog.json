@@ -1,0 +1,25 @@
+{
+  "_comment": "Brands shown first in the picker, plus models common in Lebanon that the US vPIC database often lacks. Edit freely.",
+  "popular_makes": [
+    "Kia", "Hyundai", "Toyota", "Nissan", "Mercedes-Benz", "BMW", "Volkswagen",
+    "Honda", "Mitsubishi", "Chevrolet", "Ford", "Jeep", "Suzuki", "Renault",
+    "Peugeot", "Audi", "Lexus", "Land Rover", "Mazda", "Infiniti", "Chery",
+    "BYD", "Geely", "MG", "Skoda", "Opel", "Citroen"
+  ],
+  "models": {
+    "Peugeot": ["208", "2008", "301", "308", "3008", "408", "508", "5008", "Partner", "Expert"],
+    "Renault": ["Clio", "Megane", "Captur", "Duster", "Koleos", "Symbol", "Logan", "Kangoo", "Talisman"],
+    "Citroen": ["C3", "C4", "C5 Aircross", "C-Elysee", "Berlingo"],
+    "Opel": ["Corsa", "Astra", "Insignia", "Mokka", "Grandland", "Crossland"],
+    "Skoda": ["Fabia", "Octavia", "Superb", "Kodiaq", "Karoq", "Kamiq"],
+    "Dacia": ["Logan", "Sandero", "Duster"],
+    "Chery": ["Tiggo 2", "Tiggo 4", "Tiggo 7", "Tiggo 8", "Arrizo 5", "Arrizo 6"],
+    "Geely": ["Coolray", "Emgrand", "Tugella", "Monjaro", "Okavango", "Geometry C"],
+    "BYD": ["Atto 3", "Dolphin", "Seal", "Song Plus", "Han", "Tang", "Qin Plus"],
+    "MG": ["MG3", "MG4", "MG5", "MG6", "ZS", "HS", "RX5", "GT"],
+    "Haval": ["Jolion", "H6", "H9"],
+    "Changan": ["CS35", "CS55", "CS75", "CS85", "Alsvin", "Eado", "UNI-K"],
+    "Kia": ["Picanto", "Rio", "Cerato", "Forte", "K5", "Optima", "Sportage", "Sorento", "Seltos", "Soul", "Carnival", "Pegas"],
+    "Hyundai": ["i10", "i20", "Accent", "Elantra", "Sonata", "Tucson", "Santa Fe", "Creta", "Kona", "Venue", "Grand i10", "H-1"]
+  }
+}

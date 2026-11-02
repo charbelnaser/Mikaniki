@@ -1,0 +1,9 @@
+{
+  "name": "Mikaniki — AI mechanic",
+  "short_name": "Mikaniki",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f2ec",
+  "theme_color": "#0f1b2d",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

@@ -1,0 +1,101 @@
+<div class="chat-layout">
+  <!-- ============ Sidebar: car + history ============ -->
+  <aside class="sidebar" [class.open]="showHistory()">
+    @if (vehicle(); as v) {
+      <div class="car-card">
+        <span class="badge">{{ v.make }}</span>
+        <strong>{{ v.year }} {{ v.model }}</strong>
+        @if (v.engine) { <span class="muted small">{{ v.engine }}</span> }
+        @if (v.mileage_km != null) { <span class="muted small" dir="ltr">{{ v.mileage_km }} km</span> }
+        @if (v.vin) {
+          <a class="small" [routerLink]="['/cars', v.id, 'parts']">🔩 {{ 'parts.title' | t }}</a>
+        }
+        <a class="small" routerLink="/cars">{{ 'chat.changeCar' | t }}</a>
+      </div>
+    }
+
+    <button class="btn btn-accent btn-block" type="button" (click)="newChat()">+ {{ 'chat.newChat' | t }}</button>
+
+    <h3 class="history-title">{{ 'chat.history' | t }}</h3>
+    <nav class="history">
+      @for (c of conversations(); track c.id) {
+        <a [routerLink]="['/cars', c.vehicle_id, 'chat', c.id]" [class.active]="c.id === conversationId()">
+          {{ c.title }}
+        </a>
+      } @empty {
+        <p class="muted small">{{ 'chat.noHistory' | t }}</p>
+      }
+    </nav>
+  </aside>
+
+  <!-- ============ Conversation ============ -->
+  <section class="conversation">
+    <div class="mobile-bar">
+      <button class="btn btn-ghost" type="button" (click)="showHistory.set(!showHistory())">☰ {{ 'chat.history' | t }}</button>
+      @if (vehicle(); as v) { <strong class="mobile-car">{{ v.year }} {{ v.make }} {{ v.model }}</strong> }
+    </div>
+
+    <div class="messages" #scroller>
+      @if (loading()) {
+        <p class="muted center">{{ 'common.loading' | t }}</p>
+      } @else if (!messages().length) {
+        <div class="welcome">
+          <div class="welcome-icon" aria-hidden="true">🔧</div>
+          <h2>{{ 'chat.welcomeTitle' | t: { car: (vehicle()?.model ?? '') } }}</h2>
+          <p class="muted">{{ 'chat.welcomeText' | t }}</p>
+          <div class="suggestions">
+            @for (s of suggestions; track s) {
+              <button class="chip" type="button" (click)="useSuggestion(s)" [disabled]="sending()">{{ s | t }}</button>
+            }
+          </div>
+        </div>
+      } @else {
+        @for (m of messages(); track m.id) {
+          <div class="msg" [class.user]="m.role === 'user'" [class.assistant]="m.role === 'assistant'">
+            @if (m.pending) {
+              <div class="bubble thinking"><span class="dots"><i></i><i></i><i></i></span> {{ 'chat.thinking' | t }}</div>
+            } @else {
+              <div class="bubble">
+                @if (m.image_url) { <img class="photo" [src]="m.image_url" alt="" /> }
+                @if (m.role === 'assistant') {
+                  @let answer = answers().get(m.id);
+                  <div class="md" dir="auto" [innerHTML]="answer?.html ?? ''"></div>
+                  @if (answer?.media; as media) {
+                    <app-answer-media [media]="media" [vehicle]="vehicle()" />
+                  }
+                } @else if (m.content) {
+                  <p class="plain" dir="auto">{{ m.content }}</p>
+                }
+              </div>
+            }
+          </div>
+        }
+      }
+    </div>
+
+    <!-- ============ Composer ============ -->
+    <div class="composer">
+      @if (error()) { <div class="alert alert-error" role="alert">{{ error() }}</div> }
+
+      @if (imagePreview(); as src) {
+        <div class="preview">
+          <img [src]="src" alt="" />
+          <button type="button" class="remove" (click)="clearImage()" [attr.aria-label]="'chat.removePhoto' | t">×</button>
+        </div>
+      }
+
+      <div class="composer-row">
+        <input #fileInput type="file" accept="image/*" hidden (change)="onFile($event)" />
+        <button class="icon-btn" type="button" (click)="fileInput.click()" [attr.aria-label]="'chat.attach' | t"
+                [title]="'chat.attach' | t" [disabled]="sending()">📷</button>
+
+        <textarea rows="1" dir="auto" [placeholder]="'chat.placeholder' | t" [value]="draft()"
+                  (input)="draft.set($any($event.target).value)" (keydown)="onKeydown($event)"></textarea>
+
+        <button class="btn btn-primary" type="button" (click)="send()"
+                [disabled]="sending() || (!draft().trim() && !image())">{{ 'chat.send' | t }}</button>
+      </div>
+      <p class="disclaimer muted">{{ 'chat.disclaimer' | t }}</p>
+    </div>
+  </section>
+</div>

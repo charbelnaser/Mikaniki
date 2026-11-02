@@ -1,0 +1,30 @@
+h1 { margin-top: 12px; }
+
+.tabs {
+  display: flex; gap: 4px; padding: 4px; margin: 20px 0 14px;
+  background: #ebe6dc; border-radius: 999px;
+}
+.tabs button {
+  flex: 1; border: 0; background: transparent; font: inherit; font-weight: 600;
+  padding: 8px 12px; border-radius: 999px; cursor: pointer; color: var(--muted);
+}
+.tabs button.active { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
+
+.vin-row { display: flex; gap: 8px; }
+.vin-row input { flex: 1; }
+@media (max-width: 480px) { .vin-row { flex-direction: column; } }
+.vin-photo { align-self: flex-start; margin-top: 8px; cursor: pointer; }
+.vin-photo.disabled { opacity: .6; pointer-events: none; }
+
+.found {
+  display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px;
+  padding: 12px 14px; border-radius: 10px; background: #effaf2; border: 1px solid #c8ecd3;
+}
+.found-label { color: var(--ok); font-weight: 600; font-size: .85rem; }
+
+.popular { margin: -4px 0 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.small { font-size: .8rem; font-weight: 400; }
+
+.section { font-size: 1rem; margin: 10px 0 12px; padding-top: 14px; border-top: 1px solid var(--line); }
+.footer { margin-top: 6px; }

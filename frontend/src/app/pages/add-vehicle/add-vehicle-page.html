@@ -1,0 +1,170 @@
+<section class="page page-narrow">
+  <h1>{{ 'add.title' | t }}</h1>
+  <p class="muted">{{ 'add.subtitle' | t }}</p>
+
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" [attr.aria-selected]="tab() === 'catalog'"
+            [class.active]="tab() === 'catalog'" (click)="setTab('catalog')">{{ 'add.tabCatalog' | t }}</button>
+    <button type="button" role="tab" [attr.aria-selected]="tab() === 'vin'"
+            [class.active]="tab() === 'vin'" (click)="setTab('vin')">{{ 'add.tabVin' | t }}</button>
+    <button type="button" role="tab" [attr.aria-selected]="tab() === 'manual'"
+            [class.active]="tab() === 'manual'" (click)="setTab('manual')">{{ 'add.tabManual' | t }}</button>
+  </div>
+
+  <form class="card" [formGroup]="form" (ngSubmit)="save()">
+    @if (error()) {
+      <div class="alert alert-error" role="alert">{{ error() }}</div>
+    }
+
+    <!-- ================= VIN ================= -->
+    @if (tab() === 'vin') {
+      <div class="field">
+        <label for="vin">{{ 'add.vin' | t }}</label>
+        <div class="vin-row">
+          <input id="vin" class="mono" dir="ltr" maxlength="17" [formControl]="vinCtrl"
+                 placeholder="1HGCM82633A004352" (keydown.enter)="$event.preventDefault(); decodeVin()" />
+          <button class="btn btn-primary" type="button" (click)="decodeVin()"
+                  [disabled]="vinCtrl.invalid || !vinCtrl.value || vinBusy()">
+            {{ (vinBusy() ? 'add.decoding' : 'add.decode') | t }}
+          </button>
+        </div>
+        <small>{{ 'add.vinHint' | t }}</small>
+        <label class="btn vin-photo" [class.disabled]="vinBusy()">
+          📷 {{ (vinReading() ? 'add.vinReading' : 'add.vinPhoto') | t }}
+          <input type="file" accept="image/*" capture="environment" hidden [disabled]="vinBusy()"
+                 (change)="vinFromPhoto($event)" />
+        </label>
+      </div>
+
+      @if (vinResult(); as r) {
+        <div class="found">
+          <span class="found-label">✓ {{ 'add.found' | t }}</span>
+          <strong>{{ r.year }} {{ r.make }} {{ r.model }}</strong>
+          <span class="muted">{{ vinSummary(r) }}</span>
+        </div>
+      }
+    }
+
+    <!-- ============ CATALOG / MANUAL ============ -->
+    @if (tab() !== 'vin') {
+      <div class="grid-2">
+        <div class="field">
+          <label for="year">{{ 'add.year' | t }}</label>
+          <select id="year" formControlName="year">
+            <option [ngValue]="null" disabled>—</option>
+            @for (y of years; track y) { <option [ngValue]="y">{{ y }}</option> }
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="make">{{ 'add.make' | t }}</label>
+          <input id="make" formControlName="make" [attr.list]="tab() === 'catalog' ? 'makes-list' : null"
+                 [placeholder]="'add.searchMake' | t" autocomplete="off" />
+          <datalist id="makes-list">
+            @for (m of makes(); track m.name) { <option [value]="m.name"></option> }
+          </datalist>
+        </div>
+      </div>
+
+      @if (tab() === 'catalog' && popularMakes().length) {
+        <div class="popular">
+          <span class="muted small">{{ 'add.popular' | t }}</span>
+          <div class="chips">
+            @for (m of popularMakes(); track m.name) {
+              <button type="button" class="chip" [class.active]="form.controls.make.value === m.name"
+                      (click)="pickMake(m.name)">{{ m.name }}</button>
+            }
+          </div>
+        </div>
+      }
+
+      <div class="field">
+        <label for="model">{{ 'add.model' | t }}</label>
+        <input id="model" formControlName="model" [attr.list]="tab() === 'catalog' ? 'models-list' : null"
+               [placeholder]="(tab() === 'catalog' && (!form.controls.year.value || !form.controls.make.value)
+                 ? 'add.chooseFirst' : 'add.typeModel') | t"
+               autocomplete="off" />
+        <datalist id="models-list">
+          @for (m of models(); track m.name) { <option [value]="m.name"></option> }
+        </datalist>
+        @if (tab() === 'catalog' && modelsLoading()) { <small>{{ 'add.loadingModels' | t }}</small> }
+      </div>
+    }
+
+    <!-- ================= DETAILS (all tabs) ================= -->
+    @if (showDetails()) {
+      <h3 class="section">{{ 'add.details' | t }}</h3>
+
+      @if (versionsLoading()) {
+        <p class="muted small">{{ 'add.loadingVersions' | t }}</p>
+      } @else if (versions().length) {
+        <div class="field">
+          <label for="version">{{ 'add.version' | t }}</label>
+          <select id="version" dir="ltr" [value]="form.controls.epa_id.value ?? ''"
+                  (change)="pickVersion($any($event.target).value ? +$any($event.target).value : null)">
+            <option value="">{{ 'add.versionUnknown' | t }}</option>
+            @for (v of versions(); track v.id) { <option [value]="v.id">{{ v.text }}</option> }
+          </select>
+          <small>{{ 'add.versionHint' | t }}</small>
+        </div>
+      }
+
+      @if (tab() === 'vin') {
+        <!-- Let the user fix what the decoder got wrong -->
+        <div class="grid-2">
+          <div class="field">
+            <label for="vyear">{{ 'add.year' | t }}</label>
+            <select id="vyear" formControlName="year">
+              @for (y of years; track y) { <option [ngValue]="y">{{ y }}</option> }
+            </select>
+          </div>
+          <div class="field">
+            <label for="vmodel">{{ 'add.model' | t }}</label>
+            <input id="vmodel" formControlName="model" />
+          </div>
+        </div>
+      }
+
+      <div class="grid-2">
+        <div class="field">
+          <label for="engine">{{ 'add.engine' | t }} <span class="muted small">({{ 'common.optional' | t }})</span></label>
+          <input id="engine" formControlName="engine" [placeholder]="'add.enginePlaceholder' | t" />
+        </div>
+        <div class="field">
+          <label for="trim">{{ 'add.trim' | t }} <span class="muted small">({{ 'common.optional' | t }})</span></label>
+          <input id="trim" formControlName="trim" />
+        </div>
+        <div class="field">
+          <label for="fuel">{{ 'add.fuel' | t }}</label>
+          <select id="fuel" formControlName="fuel_type">
+            <option value="">—</option>
+            @for (f of fuels; track f) { <option [value]="f">{{ 'fuel.' + f | t }}</option> }
+          </select>
+        </div>
+        <div class="field">
+          <label for="gear">{{ 'add.transmission' | t }}</label>
+          <select id="gear" formControlName="transmission">
+            <option value="">—</option>
+            @for (g of gearboxes; track g) { <option [value]="g">{{ 'gear.' + g | t }}</option> }
+          </select>
+        </div>
+        <div class="field">
+          <label for="km">{{ 'add.mileage' | t }}</label>
+          <input id="km" type="number" inputmode="numeric" min="0" dir="ltr" formControlName="mileage_km" />
+        </div>
+        <div class="field">
+          <label for="nick">{{ 'add.nickname' | t }} <span class="muted small">({{ 'common.optional' | t }})</span></label>
+          <input id="nick" formControlName="nickname" [placeholder]="'add.nicknamePlaceholder' | t" />
+        </div>
+      </div>
+
+      <div class="row footer">
+        <a class="btn btn-ghost" routerLink="/cars">{{ 'common.cancel' | t }}</a>
+        <span class="spacer"></span>
+        <button class="btn btn-accent" type="submit" [disabled]="form.invalid || saving()">
+          {{ (saving() ? 'add.saving' : 'add.save') | t }}
+        </button>
+      </div>
+    }
+  </form>
+</section>

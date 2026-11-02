@@ -1,0 +1,22 @@
+services:
+  backend:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: sqlite:////data/mikaniki.db
+      UPLOAD_DIR: /data/uploads
+      CORS_ORIGINS: http://localhost:8080
+    volumes:
+      - mikaniki-data:/data
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  mikaniki-data:

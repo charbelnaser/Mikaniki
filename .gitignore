@@ -1,0 +1,7 @@
+# Raw DVSA download (already imported into backend/app/data/uk_recalls.json)
+RecallsFile.csv
+# Failed download, not used by the app
+backend/osm.json
+# Local tool settings
+.claude/
+.vscode/
