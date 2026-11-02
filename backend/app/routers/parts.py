@@ -7,7 +7,7 @@ from ..db import get_db
 from ..deps import get_current_user
 from ..models import User, Vehicle
 from ..schemas import PartCategoryOut, PartFindOut, PartListOut
-from ..services import vin17
+from ..services import part_names, vin17
 from .vehicles import get_owned_vehicle
 
 router = APIRouter(prefix="/api/vehicles/{vehicle_id}/parts", tags=["parts"])
@@ -67,7 +67,12 @@ async def find_part(
     vehicle = get_owned_vehicle(vehicle_id, user, db)
     try:
         epc = await _epc(vehicle, db)
-        return await vin17.find_part(epc, vehicle.vin, q)
+        # Section names first (no LLM call); else the Chinese part-name list, which finds parts
+        # filed under unrelated sections (e.g. the crank position sensor under "Cylinder Block")
+        found = await vin17.find_part(epc, vehicle.vin, q)
+        if found is None and (terms := await part_names.chinese_terms(q)):
+            found = await vin17.find_part_by_name(epc, vehicle.vin, q, terms)
+        return found
     except HTTPException as e:
         if e.status_code == 404 and e.detail == "Vehicle not found":
             raise

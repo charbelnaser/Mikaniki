@@ -15,6 +15,7 @@ Catalog browsing is not billed; only the VIN decode is (about 0.15 CNY).
 """
 
 import asyncio
+import base64
 import hashlib
 import logging
 import re
@@ -316,7 +317,8 @@ def _score(name: str, words: set[str]) -> int:
 # Words that turn a part into something else: "Pad, Brake Pedal" is not a brake pad, "Bolt(For Alternator)"
 # is not the alternator. A part name with one of these (absent from the query) ranks below exact parts.
 _CONTEXT = {"pedal", "bracket", "bolt", "nut", "clip", "gasket", "cover", "union", "washer", "seal", "hose",
-            "clamp", "carrier", "label", "plate", "pin", "screw", "stud", "grommet", "cushion", "insulator"}
+            "clamp", "carrier", "label", "plate", "pin", "screw", "stud", "grommet", "cushion", "insulator",
+            "case", "housing", "holder", "cap", "shield", "protector"}
 
 
 def _part_score(name: str, words: set[str]) -> tuple[int, int]:
@@ -363,6 +365,74 @@ async def find_part(epc: str, vin: str, query: str) -> dict | None:
     return {
         "section": {"code": section["code"], "name": section["name"], "level": section["level"]},
         "image": plist["image"],
+        "hotspots": [h for h in plist["hotspots"] if h["callout"] in callouts],
+        "parts": matched[:3],
+    }
+
+
+# ---------------------------------------------------------------- Chinese part name -> catalog section
+async def all_part_names(epc: str, vin: str) -> list[str]:
+    """Every factory part name of this VIN (5110, free). Chinese only."""
+    data = await _cached_call(f"/{epc}", {"action": "all_epc_part_name", "vin": vin})
+    return [n.strip() for n in data.split("@") if n.strip()] if isinstance(data, str) else []
+
+
+def _pairs(text: str) -> set[str]:
+    return {text[i:i + 2] for i in range(len(text) - 1)}
+
+
+def best_name(names: list[str], terms: list[str]) -> str | None:
+    """Catalog name for the first term that matches: exact, then the shortest name containing it,
+    then the closest by shared character pairs (at least 60 %: 轮毂轴承 ~ 后桥右轮毂和轴承总成, but not
+    制动分泵 ~ 制动总泵分总成). "用于" (for ...) names are accessories."""
+    for term in (t.strip() for t in terms):
+        if not term:
+            continue
+        pool = [n for n in names if "用于" not in n or "用于" in term]
+        if term in pool:
+            return term
+        containing = [n for n in pool if term in n]
+        if containing:
+            return min(containing, key=len)
+        pairs = _pairs(term)
+        if not pairs:
+            continue
+        score, _, name = max(((len(pairs & _pairs(n)) / len(pairs), -len(n), n) for n in pool), default=(0, 0, None))
+        if score >= 0.6:
+            return name
+    return None
+
+
+async def search_name(epc: str, vin: str, name: str) -> list[dict]:
+    """Where an exact catalog part name sits (5107, free): section path, callout, part number, diagram."""
+    query = base64.urlsafe_b64encode(name.encode("utf-8")).decode()  # "safe base64": / -> _, + -> -
+    data = await _cached_call(f"/{epc}", {"action": "search_epc_part_name", "vin": vin, "query_match_type": "exact",
+                                          "query_part_name": query, "query_part_name_is_safebase64": "1"})
+    return (data or {}).get("searchlist") or []
+
+
+async def find_part_by_name(epc: str, vin: str, query: str, terms: list[str]) -> dict | None:
+    """Same result as find_part, from Chinese terms: finds parts filed under unrelated sections
+    (Toyota's crank position sensor is in "Cylinder Block"). Raises Vin17Error."""
+    name = best_name(await all_part_names(epc, vin), terms)
+    if not name:
+        return None
+    rows = [r for r in await search_name(epc, vin, name) if r.get("cata_code") and _fits(r)]
+    if not rows:
+        return None
+    first = rows[0]
+    path = first.get("cata_name_en") or ""  # "1>1105_0002>CYLINDER BLOCK": depth = level
+    level = path.count(">") or int(first.get("cata_level") or 0) or 2
+    plist = await parts(epc, vin, first["cata_code"], level)
+    numbers = {r.get("partnumber") for r in rows if r["cata_code"] == first["cata_code"]}
+    matched = [p for p in plist["parts"] if p["number"] in numbers and p["fits"]]
+    words = _words(query)
+    if matched and not any(_part_score(p["name"], words)[1] for p in matched):
+        return None  # only accessories of it ("Cover, Timing Chain" for "timing chain")
+    callouts = {p["callout"] for p in matched if p["callout"]}
+    return {
+        "section": {"code": first["cata_code"], "name": _name({"name_en": path.rsplit(">", 1)[-1]}), "level": level},
+        "image": plist["image"] or _image(epc, first.get("illustration_img_address")),
         "hotspots": [h for h in plist["hotspots"] if h["callout"] in callouts],
         "parts": matched[:3],
     }

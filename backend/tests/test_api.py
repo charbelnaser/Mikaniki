@@ -471,3 +471,40 @@ def test_find_part_diagram(monkeypatch):
     assert r["hotspots"] == [{"callout": "04465", "x": 10, "y": 20}]
     assert asyncio.run(vin17.find_part("toyota", "VIN", "timing chain")) is None  # only its cover
     assert asyncio.run(vin17.find_part("toyota", "VIN", "wheel bearing")) is None
+
+
+def test_find_part_by_chinese_name(monkeypatch):
+    """17VIN names parts in Chinese only: the LLM's terms are matched to the car's part-name list."""
+    import asyncio
+
+    from app.services import vin17
+
+    names = ["曲轴位置传感器", "曲轴", "制动总泵分总成", "后桥右轮毂和轴承总成", "正时链条盖分总成", "螺栓（用于曲轴皮带轮组件）"]
+    assert vin17.best_name(names, ["曲轴位置传感器"]) == "曲轴位置传感器"           # exact
+    assert vin17.best_name(names, ["轮毂轴承"]) == "后桥右轮毂和轴承总成"            # close enough
+    assert vin17.best_name(names, ["制动分泵"]) is None                            # wheel cylinder != master cylinder
+    assert vin17.best_name(names, ["曲轴皮带轮"]) is None                          # only a bolt "for" it
+
+    async def fake_names(epc, vin):
+        return names
+
+    async def fake_search(epc, vin, name):
+        rows = {"曲轴位置传感器": ("1105_118448B-0002", "1>1105_0002>CYLINDER BLOCK", "9091905070", "11401G"),
+                "正时链条盖分总成": ("1106_11D487A-0001", "1>1106_0001>TIMING GEAR COVER", "113100T042", "11302")}[name]
+        return [{"cata_code": rows[0], "cata_level": 0, "cata_name_en": rows[1], "partnumber": rows[2],
+                 "callout": rows[3], "is_fit_for_this_vin": 1}]
+
+    async def fake_parts(epc, vin, code, level):
+        assert level == 2  # depth of "1>1105_0002>CYLINDER BLOCK"
+        part = {"1105_118448B-0002": ("9091905070", "Sensor, Crank Position", "11401G"),
+                "1106_11D487A-0001": ("113100T042", "Cover Sub-Assy, Timing Chain", "11302")}[code]
+        return {"image": "/api/parts-img/toyota/x.png", "hotspots": [{"callout": part[2], "x": 1, "y": 2}],
+                "parts": [{"number": part[0], "name": part[1], "callout": part[2], "fits": True}]}
+
+    monkeypatch.setattr(vin17, "all_part_names", fake_names)
+    monkeypatch.setattr(vin17, "search_name", fake_search)
+    monkeypatch.setattr(vin17, "parts", fake_parts)
+    r = asyncio.run(vin17.find_part_by_name("toyota", "VIN", "crankshaft position sensor", ["曲轴位置传感器"]))
+    assert r["section"] == {"code": "1105_118448B-0002", "name": "Cylinder Block", "level": 2}
+    assert [p["number"] for p in r["parts"]] == ["9091905070"] and len(r["hotspots"]) == 1
+    assert asyncio.run(vin17.find_part_by_name("toyota", "VIN", "timing chain", ["正时链条"])) is None
