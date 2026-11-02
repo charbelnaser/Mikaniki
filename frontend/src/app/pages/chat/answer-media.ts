@@ -24,7 +24,7 @@ import { TranslatePipe } from '../../shared/translate.pipe';
         <a class="btn btn-accent catalog" [routerLink]="['/cars', v.id, 'parts']">🔩 {{ 'parts.open' | t }}</a>
       }
       @for (part of media().parts; track part) {
-        <div class="part">
+        <div class="part" [class.has-diagram]="diagrams()[part]?.image">
           @if (diagrams()[part]; as d) {
             @if (d.image) {
               <a class="diagram" [routerLink]="['/cars', vehicle()?.id, 'parts']" [title]="'parts.open' | t"
@@ -91,9 +91,13 @@ import { TranslatePipe } from '../../shared/translate.pipe';
     .diagram img { width: 100%; display: block; }
     .spot { position: absolute; width: 7.5%; aspect-ratio: 2.6 / 1; border-radius: 2px;
       background: rgba(242, 163, 58, .55); outline: 1px solid var(--accent-ink); pointer-events: none; }
-    .oe { font-size: .8rem; }
+    /* This car's factory diagram is the main picture: full width, part highlighted, OE number under it */
+    .part.has-diagram { flex-direction: column; align-items: stretch; }
+    .has-diagram .diagram { width: 100%; max-width: 460px; padding: 8px; }
+    .diagram:hover { border-color: var(--ink-2); }
+    .oe { font-size: .85rem; }
     .oe b { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-    @media (max-width: 480px) { .part { flex-direction: column; } .diagram { width: 100%; max-width: 260px; } }
+    @media (max-width: 480px) { .part { flex-direction: column; } .diagram { width: 100%; } }
     .thumb img { width: 84px; height: 84px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line);
       background: #fff; display: block; }
     .part-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
