@@ -22,7 +22,12 @@ class Settings(BaseSettings):
     llm_max_tokens: int = 4000
 
     youtube_api_key: str = ""  # optional: embedded repair videos in the chat (YouTube Data API v3)
-    wikimedia_contact: str = ""  # email or URL sent to Wikimedia (required by their API policy) for part photos
+    wikimedia_contact: str = ""
+    # Optional: web photos under answers (services/images.py): "google" or "brave", or empty to disable
+    image_search_provider: str = ""
+    google_cse_key: str = ""
+    google_cse_id: str = ""
+    brave_api_key: str = ""  # email or URL sent to Wikimedia (required by their API policy) for part photos
 
     # Optional: 17VIN (paid, EPC data) decodes the VINs vPIC cannot (European, Chinese, Korean cars)
     vin17_user: str = ""

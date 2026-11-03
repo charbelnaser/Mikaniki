@@ -3,7 +3,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 
 import { ApiService } from '../../core/api.service';
-import { PartFind, PartPhoto, RepairVideo, Vehicle } from '../../core/models';
+import { PartFind, PartPhoto, RepairVideo, Vehicle, WebImage } from '../../core/models';
 import { AnswerMedia } from '../../shared/format';
 import { TranslatePipe } from '../../shared/translate.pipe';
 
@@ -53,6 +53,19 @@ import { TranslatePipe } from '../../shared/translate.pipe';
                 <a [href]="p.page_url" target="_blank" rel="noopener">{{ p.author ?? 'Wikimedia' }}, {{ p.license }}</a>
               </small>
             }
+            @if (webPhotos()[part]?.length) {
+              <div class="web">
+                <small class="muted credit">📷 {{ 'media.webPhotos' | t }}</small>
+                <div class="web-row">
+                  @for (img of webPhotos()[part]; track img.page_url) {
+                    <a class="web-img" [href]="img.page_url" target="_blank" rel="noopener" [title]="img.title ?? img.source">
+                      <img [src]="img.thumb_url" [alt]="img.title ?? part" loading="lazy" referrerpolicy="no-referrer" />
+                      <span dir="ltr">{{ img.source }}</span>
+                    </a>
+                  }
+                </div>
+              </div>
+            }
             <div class="links">
               @if (diagrams()[part]; as d) {
                 <a class="chip" [routerLink]="['/cars', vehicle()?.id, 'parts']"
@@ -98,6 +111,13 @@ import { TranslatePipe } from '../../shared/translate.pipe';
     .oe { font-size: .85rem; }
     .oe b { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
     @media (max-width: 480px) { .part { flex-direction: column; } .diagram { width: 100%; } }
+    .web { display: flex; flex-direction: column; gap: 4px; margin: 4px 0; }
+    .web-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+    .web-img { flex: none; width: 120px; text-decoration: none; color: var(--muted); font-size: .7rem; }
+    .web-img img { width: 120px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line);
+      background: #fff; display: block; }
+    .web-img span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+    .web-img:hover img { border-color: var(--ink-2); }
     .thumb img { width: 84px; height: 84px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line);
       background: #fff; display: block; }
     .part-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -123,6 +143,8 @@ export class AnswerMediaComponent implements OnInit {
   protected photos = signal<Record<string, PartPhoto>>({});
   /** This car's factory diagram per part (only when the car has a VIN and the catalog knows the part). */
   protected diagrams = signal<Record<string, PartFind>>({});
+  /** Real photos of the part on this model, from the web image search (empty when not configured). */
+  protected webPhotos = signal<Record<string, WebImage[]>>({});
   /** Embed URL built once (a new SafeResourceUrl on each render would reload the iframe). */
   protected video = signal<(RepairVideo & { embed: SafeResourceUrl }) | null>(null);
 
@@ -130,6 +152,10 @@ export class AnswerMediaComponent implements OnInit {
   ngOnInit() {
     const v = this.vehicle();
     for (const part of this.media().parts) {
+      this.api.webImages(`${this.carName()} ${part} location`.trim()).subscribe({
+        next: imgs => this.webPhotos.update(all => ({ ...all, [part]: imgs.slice(0, 3) })),
+        error: () => {},
+      });
       if (v?.vin) {
         this.api.findPart(v.id, part).subscribe({
           next: d => (d ? this.diagrams.update(all => ({ ...all, [part]: d })) : this.loadPhoto(part)),

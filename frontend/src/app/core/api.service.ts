@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import {
-  CarModel, ChatReply, Conversation, ConversationDetail, EpaVersion, Lang, Make, PartCategory, PartFind, PartList, PartPhoto, RepairVideo,
+  CarModel, ChatReply, Conversation, ConversationDetail, EpaVersion, Lang, Make, PartCategory, PartFind, PartList, PartPhoto, RepairVideo, WebImage,
   User, Vehicle, VehicleInput, VehicleReports, VinDecode,
 } from './models';
 
@@ -40,6 +40,10 @@ export class ApiService {
   // ---- media under the mechanic's answers
   partPhoto(part: string) {
     return this.http.get<PartPhoto>('/api/media/part-photo', { params: new HttpParams().set('q', part) });
+  }
+  /** Web photos (empty when no image search provider is configured). */
+  webImages(query: string) {
+    return this.http.get<WebImage[]>('/api/media/images', { params: new HttpParams().set('q', query) });
   }
   repairVideo(query: string) {
     return this.http.get<RepairVideo | null>('/api/media/video', { params: new HttpParams().set('q', query) });

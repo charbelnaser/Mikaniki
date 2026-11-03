@@ -115,6 +115,14 @@ export interface PartPhoto {
   license: string | null;
 }
 
+/** Web photo thumbnail: always shown with a link to its page and the site name. */
+export interface WebImage {
+  thumb_url: string;
+  page_url: string;
+  source: string;
+  title: string | null;
+}
+
 export interface RepairVideo {
   video_id: string;
   title: string;

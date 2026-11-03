@@ -508,3 +508,27 @@ def test_find_part_by_chinese_name(monkeypatch):
     assert r["section"] == {"code": "1105_118448B-0002", "name": "Cylinder Block", "level": 2}
     assert [p["number"] for p in r["parts"]] == ["9091905070"] and len(r["hotspots"]) == 1
     assert asyncio.run(vin17.find_part_by_name("toyota", "VIN", "timing chain", ["正时链条"])) is None
+
+
+def test_web_images(client, auth, monkeypatch):
+    """Both providers parse to thumbnails linked to their page; nothing configured means no photos."""
+    from app.services import images
+
+    google = {"items": [{"title": "Coil", "displayLink": "www.youcanic.com",
+                         "image": {"thumbnailLink": "https://t/1.jpg", "contextLink": "https://youcanic.com/coil"}},
+                        {"title": "no thumb", "image": {}}]}
+    brave = {"results": [{"title": "Coil", "url": "https://ifixit.com/x", "source": "ifixit.com",
+                          "thumbnail": {"src": "https://imgs.search.brave.com/a.jpg"}}]}
+    assert [i.source for i in images.parse_google(google)] == ["www.youcanic.com"]
+    assert images.parse_brave(brave)[0].page_url == "https://ifixit.com/x"
+
+    assert client.get("/api/media/images", params={"q": "corolla coil"}, headers=auth).json() == []  # disabled
+
+    async def fake_search(q, count=4):
+        return images.parse_google(google)
+
+    monkeypatch.setattr(images, "search", fake_search)
+    r = client.get("/api/media/images", params={"q": "corolla coil"}, headers=auth)
+    assert r.json() == [{"thumb_url": "https://t/1.jpg", "page_url": "https://youcanic.com/coil",
+                         "source": "www.youcanic.com", "title": "Coil"}]
+    assert client.get("/api/media/images", params={"q": "corolla coil"}).status_code == 401

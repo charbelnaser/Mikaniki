@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from ..deps import get_current_user
 from ..models import User
-from ..schemas import PartPhotoOut, VideoOut
-from ..services import media
+from ..schemas import PartPhotoOut, VideoOut, WebImageOut
+from ..services import images, media
 
 # Auth required so the API is not an open proxy to Wikimedia / YouTube quota
 router = APIRouter(prefix="/api/media", tags=["media"], dependencies=[Depends(get_current_user)])
@@ -31,3 +31,13 @@ async def video(q: str = Query(min_length=3, max_length=150)):
     except httpx.HTTPError:
         return None
     return VideoOut(**asdict(found)) if found else None
+
+
+@router.get("/images", response_model=list[WebImageOut])
+async def web_images(q: str = Query(min_length=3, max_length=150)):
+    """Web photos for a query ("2016 Toyota Corolla ignition coil location"); [] when not configured or down."""
+    try:
+        found = await images.search(q, count=4)
+    except httpx.HTTPError:
+        return []
+    return [WebImageOut(**asdict(i)) for i in found]

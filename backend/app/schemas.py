@@ -216,6 +216,14 @@ class PartPhotoOut(BaseModel):
     license: str | None = None
 
 
+class WebImageOut(BaseModel):
+    """Web photo thumbnail; `page_url` and `source` must be shown with it."""
+    thumb_url: str
+    page_url: str
+    source: str
+    title: str | None = None
+
+
 class VideoOut(BaseModel):
     video_id: str
     title: str
