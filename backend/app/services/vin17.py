@@ -394,12 +394,19 @@ def best_name(names: list[str], terms: list[str]) -> str | None:
         containing = [n for n in pool if term in n]
         if containing:
             return min(containing, key=len)
-        pairs = _pairs(term)
+        pairs, chars = _pairs(term), set(term)
         if not pairs:
             continue
-        score, _, name = max(((len(pairs & _pairs(n)) / len(pairs), -len(n), n) for n in pool), default=(0, 0, None))
-        if score >= 0.6:
-            return name
+        # Shared characters break ties between names with as many shared pairs:
+        # 凸轮轴位置传感器 (camshaft sensor) -> 凸轮位置传感器 (cam), not 曲轴位置传感器 (crank)
+        ranked = sorted(((len(pairs & _pairs(n)) / len(pairs), len(chars & set(n)) / len(chars), -len(n), n)
+                         for n in pool), reverse=True)
+        if ranked and ranked[0][0] >= 0.6:
+            sides = str.maketrans("", "", "左右")  # left/right versions of one part are not a real tie
+            if len(ranked) > 1 and ranked[0][:3] == ranked[1][:3] and \
+                    ranked[0][3].translate(sides) != ranked[1][3].translate(sides):
+                continue  # a true tie: guessing could show the wrong part
+            return ranked[0][3]
     return None
 
 

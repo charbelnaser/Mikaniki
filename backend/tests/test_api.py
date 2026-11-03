@@ -10,6 +10,10 @@ tmp = tempfile.mkdtemp()
 os.environ["DATABASE_URL"] = f"sqlite:///{tmp}/test.db"
 os.environ["UPLOAD_DIR"] = f"{tmp}/uploads"
 os.environ["LLM_PROVIDER"] = "mock"
+# Never call paid services from tests, whatever backend/.env contains (env vars win over the file)
+os.environ["IMAGE_SEARCH_PROVIDER"] = ""
+os.environ["VIN17_USER"] = ""
+os.environ["YOUTUBE_API_KEY"] = ""
 os.environ["SECRET_KEY"] = "test-secret-key-that-is-at-least-32-bytes-long"
 
 import pytest  # noqa: E402
@@ -479,7 +483,9 @@ def test_find_part_by_chinese_name(monkeypatch):
 
     from app.services import vin17
 
-    names = ["曲轴位置传感器", "曲轴", "制动总泵分总成", "后桥右轮毂和轴承总成", "正时链条盖分总成", "螺栓（用于曲轴皮带轮组件）"]
+    names = ["曲轴位置传感器", "凸轮位置传感器", "曲轴", "制动总泵分总成", "后桥右轮毂和轴承总成", "正时链条盖分总成",
+             "螺栓（用于曲轴皮带轮组件）"]
+    assert vin17.best_name(names, ["凸轮轴位置传感器"]) == "凸轮位置传感器"       # camshaft, not crankshaft
     assert vin17.best_name(names, ["曲轴位置传感器"]) == "曲轴位置传感器"           # exact
     assert vin17.best_name(names, ["轮毂轴承"]) == "后桥右轮毂和轴承总成"            # close enough
     assert vin17.best_name(names, ["制动分泵"]) is None                            # wheel cylinder != master cylinder

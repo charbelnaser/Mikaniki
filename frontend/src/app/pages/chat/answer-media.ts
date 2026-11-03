@@ -143,7 +143,7 @@ export class AnswerMediaComponent implements OnInit {
   protected photos = signal<Record<string, PartPhoto>>({});
   /** This car's factory diagram per part (only when the car has a VIN and the catalog knows the part). */
   protected diagrams = signal<Record<string, PartFind>>({});
-  /** Real photos of the part on this model, from the web image search (empty when not configured). */
+  /** Step-by-step repair photos of this part on this model (web image search; "how to replace X step" finds repair guides, "location" finds shop listings). */
   protected webPhotos = signal<Record<string, WebImage[]>>({});
   /** Embed URL built once (a new SafeResourceUrl on each render would reload the iframe). */
   protected video = signal<(RepairVideo & { embed: SafeResourceUrl }) | null>(null);
@@ -152,7 +152,7 @@ export class AnswerMediaComponent implements OnInit {
   ngOnInit() {
     const v = this.vehicle();
     for (const part of this.media().parts) {
-      this.api.webImages(`${this.carName()} ${part} location`.trim()).subscribe({
+      this.api.webImages(`${this.carName()} how to replace ${part} step`.trim()).subscribe({
         next: imgs => this.webPhotos.update(all => ({ ...all, [part]: imgs.slice(0, 3) })),
         error: () => {},
       });
