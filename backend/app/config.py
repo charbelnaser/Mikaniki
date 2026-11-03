@@ -27,7 +27,8 @@ class Settings(BaseSettings):
     image_search_provider: str = ""
     google_cse_key: str = ""
     google_cse_id: str = ""
-    brave_api_key: str = ""  # email or URL sent to Wikimedia (required by their API policy) for part photos
+    brave_api_key: str = ""
+    image_search_daily_limit: int = 30  # paid searches per day (cached answers are free); 30/day stays under 1,000/month  # email or URL sent to Wikimedia (required by their API policy) for part photos
 
     # Optional: 17VIN (paid, EPC data) decodes the VINs vPIC cannot (European, Chinese, Korean cars)
     vin17_user: str = ""

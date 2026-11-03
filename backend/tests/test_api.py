@@ -538,3 +538,48 @@ def test_web_images(client, auth, monkeypatch):
     assert r.json() == [{"thumb_url": "https://t/1.jpg", "page_url": "https://youcanic.com/coil",
                          "source": "www.youcanic.com", "title": "Coil"}]
     assert client.get("/api/media/images", params={"q": "corolla coil"}).status_code == 401
+
+
+def test_web_images_daily_limit(monkeypatch):
+    """After IMAGE_SEARCH_DAILY_LIMIT paid calls the provider is not called again today; cached queries still work."""
+    import asyncio
+    from datetime import date
+
+    from app.config import get_settings
+    from app.services import images
+
+    calls = []
+
+    class FakeResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"results": [{"url": "https://p", "source": "s", "thumbnail": {"src": "https://t"}}]}
+
+    class FakeClient:
+        def __init__(self, **kw):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            pass
+
+        async def get(self, url, **kw):
+            calls.append(kw["params"]["q"])
+            return FakeResponse()
+
+    monkeypatch.setattr(images, "enabled", lambda: True)
+    monkeypatch.setattr(images.httpx, "AsyncClient", FakeClient)
+    monkeypatch.setattr(get_settings(), "image_search_provider", "brave")
+    monkeypatch.setattr(get_settings(), "image_search_daily_limit", 2)
+    images._cache.clear()
+    images._calls.update(day=date.today(), count=0)
+
+    assert len(asyncio.run(images.search("a"))) == 1
+    assert len(asyncio.run(images.search("b"))) == 1
+    assert asyncio.run(images.search("c")) == []        # limit reached: no call
+    assert len(asyncio.run(images.search("a"))) == 1    # cached: free
+    assert calls == ["a", "b"]

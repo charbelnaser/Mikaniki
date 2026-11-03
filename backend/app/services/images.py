@@ -7,11 +7,14 @@ Provider chosen by IMAGE_SEARCH_PROVIDER:
 - brave:  Brave Search API image search - BRAVE_API_KEY.
 
 Only thumbnails are shown, each linking to the page it comes from with the site name, like a search engine.
-Results are cached in memory, so a repeated query costs one call per process per TTL.
+Results are cached in memory, so a repeated query costs one call per process per TTL, and at most
+IMAGE_SEARCH_DAILY_LIMIT calls are made per day (the counter lives in memory and restarts with the
+process, so also set a monthly limit in the provider's dashboard).
 """
 
 import time
 from dataclasses import dataclass
+from datetime import date
 
 import httpx
 
@@ -23,6 +26,7 @@ TIMEOUT = 8
 _TTL = 60 * 60 * 24 * 7
 
 _cache: dict[str, tuple[float, list["WebImage"]]] = {}
+_calls = {"day": date.min, "count": 0}  # paid calls made today
 
 
 @dataclass
@@ -69,6 +73,11 @@ async def search(query: str, count: int = 4) -> list[WebImage]:
     hit = _cache.get(key)
     if hit and hit[0] > time.time():
         return hit[1]
+    if _calls["day"] != date.today():
+        _calls.update(day=date.today(), count=0)
+    if _calls["count"] >= s.image_search_daily_limit:
+        return []  # daily budget used: no photos until tomorrow (diagrams and links still show)
+    _calls["count"] += 1
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
         if s.image_search_provider == "google":
             r = await client.get(GOOGLE, params={"key": s.google_cse_key, "cx": s.google_cse_id, "q": query,
